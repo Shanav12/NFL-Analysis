@@ -1,59 +1,99 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
-df = pd.read_csv("2021NFL.csv")
-#Removing noise
-df = df[(df["pass_att"] >= 15) | (df["rush_att"] >= 10)]
-#Computing the completion percentage for each quarterback in each game
-df["pass_cmp_percentage"] = df["pass_cmp"] / df["pass_att"]
-#Normalzing the data
-df["home_score"] = df["home_score"]  / df["home_score"].abs().max()
-df["vis_score"] = df["vis_score"]  / df["vis_score"].abs().max()
-df["pass_yds"] = df["pass_yds"]  / df["pass_yds"].abs().max()
-df["pass_cmp_percentage"] = df["pass_cmp_percentage"]  / df["pass_cmp_percentage"].abs().max()
-df["pass_td"] = df["pass_td"]  / df["pass_td"].abs().max()
-df["pass_sacked"] = df["pass_sacked"]  / df["pass_sacked"].abs().max()
-df["pass_rating"] = df["pass_rating"]  / df["pass_rating"].abs().max()
-df["rush_att"] = df["rush_att"]  / df["rush_att"].abs().max()
-df["rush_yds"] = df["rush_yds"]  / df["rush_yds"].abs().max()
-df["rush_td"] = df["rush_td"]  / df["rush_td"].abs().max()
-df["rush_yac"] = df["rush_yac"]  / df["rush_yac"].abs().max()
-df["rush_broken_tackles"] = df["rush_broken_tackles"]  / df["rush_broken_tackles"].abs().max()
-df["rush_yds_before_contact"] = df["rush_yds_before_contact"] / df["rush_yds_before_contact"].abs().max()
-#Splitting into datasets that contain quarterback and running back data for home and away games
-df_qb_home = df[(df.pos == "QB") & (df.team == df["home_team"])]
-df_qb_away = df[(df.pos == "QB") & (df.team == df["vis_team"])]
-df_rb_home = df[(df.pos == "RB") & (df.team == df["home_team"])]
-df_rb_away = df[(df.pos == "RB") & (df.team == df["vis_team"])]
-#Using passing metrics to predict the points a team scores at home
-X_qb_home = df_qb_home[["pass_yds", "pass_cmp_percentage","pass_td","pass_sacked", "pass_rating"]]
-Y_qb_home = df_qb_home[["home_score"]]
-# Setting a constant random state to ensure the testing and training data is consistently split in the same manner
-X_train_qb_home, X_test_qb_home, Y_train_qb_home, Y_test_qb_home = train_test_split(X_qb_home, Y_qb_home, test_size= 0.5, random_state = 42)
-qb_home_model = LinearRegression()
-qb_home_score_train = qb_home_model.fit(X_train_qb_home, Y_train_qb_home)
-print("The coefficient of determination for the home scoring quarterback model is: " + str(round(qb_home_score_train.score(X_test_qb_home, Y_test_qb_home), 2)))
-#Using passing metrics to predict the points a team scores on the road
-X_qb_away = df_qb_away[["pass_yds", "pass_cmp_percentage", "pass_td", "pass_sacked", "pass_rating"]]
-Y_qb_away = df_qb_away[["vis_score"]]
-# Setting a constant random state to ensure the testing and training data is consistently split in the same manner
-X_train_qb_away, X_test_qb_away, Y_train_qb_away, Y_test_qb_away = train_test_split(X_qb_away, Y_qb_away, test_size= 0.5, random_state = 42)
-qb_away_model = LinearRegression()
-qb_away_score_train = qb_away_model.fit(X_train_qb_away, Y_train_qb_away)
-print("The coefficient of determination for the away scoring quarterback model is: " + str(round(qb_away_score_train.score(X_test_qb_away, Y_test_qb_away), 2)))
-#Using rushing metrics to predict the points a team scores at home
-X_home_rb = df_rb_home[["rush_yds","rush_td", "rush_yac", "rush_yds_before_contact", "rush_att"]]
-Y_home_rb = df_rb_home[["home_score"]]
-# Setting a constant random state to ensure the testing and training data is consistently split in the same manner
-X_train_rb_home, X_test_rb_home, Y_train_rb_home, Y_test_rb_home = train_test_split(X_home_rb, Y_home_rb, test_size= 0.5, random_state = 42)
-rb_home_model = LinearRegression()
-rb_home_score_train = rb_home_model.fit(X_train_rb_home, Y_train_rb_home)
-print("The coefficient of determination for the home scoring running back model is: " + str(round(rb_home_score_train.score(X_test_rb_home, Y_test_rb_home), 2)))
-#Using rushing metrics to predict the points a team scores on the road
-X_away_rb = df_rb_away[["rush_yds", "rush_td", "rush_yac", "rush_yds_before_contact", "rush_att"]]
-Y_away_rb = df_rb_away[["vis_score"]]
-# Setting a constant random state to ensure the testing and training data is consistently split in the same manner
-X_train_rb_away, X_test_rb_away, Y_train_rb_away, Y_test_rb_away = train_test_split(X_away_rb, Y_away_rb, test_size= 0.5, random_state = 42)
-rb_away_model = LinearRegression()
-rb_away_score_train = rb_away_model.fit(X_train_rb_away, Y_train_rb_away)
-print("The coefficient of determination for the away scoring running back model is: " + str(round(rb_away_score_train.score(X_test_rb_away, Y_test_rb_away), 2)))
+from sklearn.metrics import mean_squared_error
+df_2020 = pd.read_csv("Passing_2020.csv")
+df_2021 = pd.read_csv("Passing_2021.csv")
+#Calculating touchdown, sack, and interception percentage for each player
+df_2020["TD%"] = (df_2020['TD'] * 100) / df_2020['ATT']
+df_2021["TD%"] = (df_2021['TD'] * 100) / df_2021['ATT']
+df_2020["INT%"] = (df_2020['INT'] * 100) / df_2020['ATT']
+df_2021["INT%"] = (df_2021['INT'] * 100) / df_2021['ATT']
+df_2020["SACK%"] = (df_2020['SACK'] * 100) / df_2020['ATT']
+df_2021["SACK%"] = (df_2021['SACK'] * 100) / df_2021['ATT']
+#Normalizing data points
+df_2020["TD%"] = df_2020["TD%"]  / df_2020["TD%"].abs().max()
+df_2020["INT%"] = df_2020["INT%"]  / df_2020["INT%"].abs().max()
+df_2020["ATT"] = df_2020["ATT"]  / df_2020["ATT"].abs().max()
+df_2020["CMP"] = df_2020["CMP"]  / df_2020["CMP"].abs().max()
+df_2020["TD"] = df_2020["TD"]  / df_2020["TD"].abs().max()
+df_2020["INT"] = df_2020["INT"]  / df_2020["INT"].abs().max()
+df_2020["YDS"] = df_2020["YDS"]  / df_2020["YDS"].abs().max()
+df_2020["SACK"] = df_2020["SACK"]  / df_2020["SACK"].abs().max()
+df_2020["SACK%"] = df_2020["SACK%"]  / df_2020["SACK%"].abs().max()
+df_2020["AVG"] = df_2020["AVG"]  / df_2020["AVG"].abs().max()
+df_2021["TD%"] = df_2021["TD%"]  / df_2021["TD%"].abs().max()
+df_2021["INT%"] = df_2021["INT%"]  / df_2021["INT%"].abs().max()
+df_2021["ATT"] = df_2021["ATT"]  / df_2021["ATT"].abs().max()
+df_2021["CMP"] = df_2021["CMP"]  / df_2021["CMP"].abs().max()
+df_2021["TD"] = df_2021["TD"]  / df_2021["TD"].abs().max()
+df_2021["INT"] = df_2021["INT"]  / df_2021["INT"].abs().max()
+df_2021["YDS"] = df_2021["YDS"]  / df_2021["YDS"].abs().max()
+df_2021["SACK"] = df_2021["SACK"]  / df_2021["SACK"].abs().max()
+df_2021["SACK%"] = df_2021["SACK%"]  / df_2021["SACK%"].abs().max()
+df_2021["AVG"] = df_2021["AVG"]  / df_2021["AVG"].abs().max()
+#Using touchdown and interception percentage to predict QBR
+X_1 = df_2021[["TD%", "INT%"]]
+y_1 = df_2021["QBR"]
+model1 = LinearRegression()
+model1 = model1.fit(df_2020[['TD%',"INT%"]], df_2020["QBR"])
+df_1 = df_2021.copy()
+df_1["Predicted QBR"] = model1.predict(df_2021[["TD%", "INT%"]])
+df_1["Residual"] = df_1["QBR"] - df_1["Predicted QBR"]
+RMSE_1 = mean_squared_error(df_1["QBR"], df_1["Predicted QBR"], squared = False)
+print("The accuracy for predicting QBR from touchdown percentage and interception percentage is: " + str(round(model1.score(X_1, y_1) * 100, 3)) + "%")
+#Using yards per attempt and completion percentage to predict QBR
+X_2 = df_2021[["AVG", "CMP%"]]
+y_2 = df_2021["QBR"]
+model2 = LinearRegression()
+model2 = model2.fit(df_2020[['AVG','CMP%']], df_2020["QBR"])
+df_2 = df_2021.copy()
+df_2["Predicted QBR"] = model2.predict(df_2021[["AVG", "CMP%"]])
+df_2["Residual"] = df_2["QBR"] - df_2["Predicted QBR"]
+RMSE_2 = mean_squared_error(df_2["QBR"], df_2["Predicted QBR"], squared = False)
+print("The accuracy for predicting QBR from YPA and completion percentage is: " + str(round(model2.score(X_2, y_2) * 100, 3)) + "%")
+#Using interception and completion percentage to predict QBR
+X_3 = df_2021[["INT%", "CMP%"]]
+y_3 = df_2021["QBR"]
+model3 = LinearRegression()
+model3 = model3.fit(df_2020[['INT%','CMP%']], df_2020["QBR"])
+df_3 = df_2021.copy()
+df_3["Predicted QBR"] = model3.predict(df_2021[["INT%", "CMP%"]])
+df_3["Residual"] = df_3["QBR"] - df_3["Predicted QBR"]
+RMSE_3 = mean_squared_error(df_3["QBR"], df_3["Predicted QBR"], squared = False)
+print("The accuracy for predicting QBR from interception percentage and completion percentage is: " + str(round(model3.score(X_3, y_3) * 100, 3)) + "%")
+#Using touchdown and completion percentage to predict QBR
+X_4 = df_2021[["TD%", "CMP%"]]
+y_4 = df_2021["QBR"]
+model4 = LinearRegression()
+model4 = model4.fit(df_2020[['TD%','CMP%']], df_2020["QBR"])
+df_4= df_2021.copy()
+df_4["Predicted QBR"] = model4.predict(df_2021[["TD%", "CMP%"]])
+df_4["Residual"] = df_4["QBR"] - df_4["Predicted QBR"]
+RMSE_4 = mean_squared_error(df_4["QBR"], df_4["Predicted QBR"], squared = False)
+print("The accuracy for predicting QBR from touchdown percentage and completion percentage is: " + str(round(model4.score(X_4, y_4) * 100, 3)) + "%")
+#Using yards per attempt and interception percentage to predict QBR
+X_5 = df_2021[["AVG", "INT%"]]
+y_5 = df_2021["QBR"]
+model5 = LinearRegression()
+model5 = model5.fit(df_2020[['AVG','INT%']], df_2020["QBR"])
+df_5 = df_2021.copy()
+df_5["Predicted QBR"] = model5.predict(df_2021[["AVG", "INT%"]])
+df_5["Residual"] = df_5["QBR"] - df_5["Predicted QBR"]
+RMSE_5 = mean_squared_error(df_5["QBR"], df_5["Predicted QBR"], squared = False)
+print("The accuracy for predicting QBR from YPA and interception percentage is: " + str(round(model5.score(X_5, y_5) * 100, 3)) + "%")
+#Using sack and interception percentage to predict QBR
+X_6 = df_2021[["SACK%", "INT%"]]
+y_6 = df_2021["QBR"]
+model6 = LinearRegression()
+model6 = model6.fit(df_2020[['SACK%','INT%']], df_2020["QBR"])
+df_6 = df_2021.copy()
+df_6["Predicted QBR"] = model6.predict(df_2021[["SACK%", "INT%"]])
+df_6["Residual"] = df_6["QBR"] - df_6["Predicted QBR"]
+RMSE_6 = mean_squared_error(df_6["QBR"], df_6["Predicted QBR"], squared = False)
+print("The accuracy for predicting QBR from sack percentage and interception percentage is: " + str(round(model6.score(X_6, y_6) * 100, 3)) + "%")
+print("The RMSE for model 1 is: " + str(RMSE_1))
+print("The RMSE for model 2 is: " + str(RMSE_2))
+print("The RMSE for model 3 is: " + str(RMSE_3))
+print("The RMSE for model 4 is: " + str(RMSE_4))
+print("The RMSE for model 5 is: " + str(RMSE_5))
+print("The RMSE for model 6 is: " + str(RMSE_6))
